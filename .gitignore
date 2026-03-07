@@ -1,0 +1,23 @@
+node_modules/
+package-lock.json
+
+# Electron cache
+.electron/
+electron-builder.env
+
+# Config with secrets
+config.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~

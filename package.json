@@ -1,0 +1,12 @@
+{
+  "name": "mudkat-kiosk",
+  "version": "1.0.0",
+  "description": "MUDKAT NOC Kiosk - Self-hosted network operations center dashboard for Raspberry Pi 5",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

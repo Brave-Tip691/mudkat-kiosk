@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=MUDKAT NOC Kiosk
+# Replace <user> with the kiosk user account name
+Exec=/usr/bin/npm start --prefix /home/<user>/mudkat-kiosk
+Path=/home/<user>/mudkat-kiosk
+Terminal=false
+X-GNOME-Autostart-enabled=true

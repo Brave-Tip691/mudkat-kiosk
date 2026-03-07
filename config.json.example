@@ -1,0 +1,10 @@
+{
+  "pihole_password": "YOUR_PIHOLE_PASSWORD_HERE",
+
+  "grafana_url": "http://localhost:3000/d/YOUR_DASHBOARD_ID/your-dashboard?orgId=1&refresh=5s&kiosk",
+  "uptime_url": "http://localhost:3001/status/default",
+  "pihole_url": "http://localhost:80/admin",
+
+  "display_ip": "192.168.x.x",
+  "display_gateway": "192.168.x.x"
+}

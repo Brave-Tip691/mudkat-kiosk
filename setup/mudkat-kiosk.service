@@ -1,0 +1,19 @@
+[Unit]
+Description=MUDKAT NOC Kiosk
+After=graphical-session.target network.target
+Wants=graphical-session.target
+
+[Service]
+Type=simple
+# Replace <user> with the kiosk user account name
+User=<user>
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/<user>/.Xauthority
+Environment=HOME=/home/<user>
+WorkingDirectory=/home/<user>/mudkat-kiosk
+ExecStart=/usr/bin/npm start
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
