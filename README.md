@@ -4,7 +4,9 @@ Self-hosted network operations center dashboard for Raspberry Pi 5 with a 7-inch
 
 A single Electron app that replaces a typical Chromium kiosk + Python HTTP server + nginx + evdev navigation script setup.
 
-![Screenshot placeholder](screenshot.png)
+## Screenshots
+
+![MUDKAT NOC home screen](assets/screenshot.png)
 
 ## Features
 

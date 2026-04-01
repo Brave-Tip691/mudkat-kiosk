@@ -6,5 +6,11 @@
   "pihole_url": "http://localhost:80/admin",
 
   "display_ip": "192.168.x.x",
-  "display_gateway": "192.168.x.x"
+  "display_gateway": "192.168.x.x",
+
+  "idle_home_seconds": 60,
+  "idle_service_seconds": 120,
+  "carousel_seconds": 30,
+  "dim_after_seconds": 3600,
+  "dim_brightness": 30
 }
