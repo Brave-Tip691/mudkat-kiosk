@@ -13,15 +13,23 @@ try {
   // config.json missing or invalid -- Pi-hole auto-login will be skipped
 }
 
+const MUDKAT_API = config.mudkat_api || 'http://192.168.1.100:8000';
+
 // ---------------------------------------------------------------------------
 // Service definitions (URLs can be overridden in config.json)
 // ---------------------------------------------------------------------------
 const SERVICES = {
   grafana: {
     name: 'GRAFANA',
-    url: config.grafana_url || 'http://localhost:3000',
+    url: config.grafana_url || 'http://localhost:3000/d/rYdddlPWk/node-exporter-full?orgId=1&from=now-24h&to=now&timezone=browser&var-ds_prometheus=fff1tk4l7k4qoe&var-job=node&var-nodename=raspberrypi&var-node=localhost:9100&refresh=1m&kiosk',
     pingUrl: 'http://localhost:3000',
     zoom: 0.50
+  },
+  soc: {
+    name: 'MUDKAT SOC',
+    url: 'http://localhost:3000/d/adnv62z/mudkat-soc?orgId=1&from=now-15m&to=now&timezone=browser&kiosk',
+    pingUrl: 'http://localhost:3000',
+    zoom: 0.55
   },
   uptime: {
     name: 'UPTIME KUMA',
@@ -34,10 +42,49 @@ const SERVICES = {
     url: config.pihole_url || 'http://localhost:80/admin',
     pingUrl: 'http://localhost:80',
     zoom: 0.80
+  },
+  mudkat: {
+    name: 'MUDKAT',
+    url: MUDKAT_API + '/ui/',
+    pingUrl: MUDKAT_API,
+    zoom: 0.65
+  },
+  agents: {
+    name: 'AGENT MONITOR',
+    url: MUDKAT_API + '/dashboard/monitor',
+    pingUrl: MUDKAT_API,
+    zoom: 0.65
+  },
+  findings: {
+    name: 'FINDINGS',
+    url: MUDKAT_API + '/ui/findings',
+    pingUrl: MUDKAT_API,
+    zoom: 0.65
+  },
+  overview: {
+    name: 'OVERVIEW',
+    url: MUDKAT_API + '/ui/',
+    pingUrl: MUDKAT_API,
+    zoom: 0.65
   }
 };
 
-const SERVICE_ORDER = ['grafana', 'uptime', 'pihole'];
+const SERVICE_ORDER = ['mudkat', 'grafana', 'soc', 'uptime', 'pihole'];
+
+// Only allow navigation to localhost / LAN addresses
+function isLocalUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    return host === 'localhost' ||
+           host === '127.0.0.1' ||
+           host.startsWith('192.168.') ||
+           host.startsWith('10.') ||
+           /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  } catch {
+    return false;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // State
@@ -54,9 +101,87 @@ let carouselIndex = 0;
 let clockInterval = null;
 let pingInterval = null;
 
-const IDLE_HOME_THRESHOLD = 60000;    // 60s on home -> start carousel
-const IDLE_SERVICE_THRESHOLD = 120000; // 120s on service -> go home
-const CAROUSEL_ROTATE_MS = 30000;     // 30s per service in carousel
+// Configurable timers (config.json values are in seconds, defaults below)
+const IDLE_HOME_THRESHOLD = (config.idle_home_seconds || 60) * 1000;
+const IDLE_SERVICE_THRESHOLD = (config.idle_service_seconds || 120) * 1000;
+const CAROUSEL_ROTATE_MS = (config.carousel_seconds || 30) * 1000;
+
+// ---------------------------------------------------------------------------
+// Screen dimming (Pi backlight)
+// ---------------------------------------------------------------------------
+const BACKLIGHT_PATHS = [
+  '/sys/class/backlight/10-0045/brightness',
+  '/sys/class/backlight/rpi_backlight/brightness'
+];
+let backlightPath = null;
+let backlightMax = 255;
+const BRIGHTNESS_DIM = config.dim_brightness || 30;
+const DIM_THRESHOLD = (config.dim_after_seconds || 3600) * 1000; // default 1 hour
+let isDimmed = false;
+
+function initBacklight() {
+  // Find the correct backlight sysfs path
+  for (const p of BACKLIGHT_PATHS) {
+    try {
+      fs.accessSync(p, fs.constants.W_OK);
+      backlightPath = p;
+      // Read max brightness from sibling file
+      const maxPath = path.join(path.dirname(p), 'max_brightness');
+      try { backlightMax = parseInt(fs.readFileSync(maxPath, 'utf8').trim(), 10) || 255; } catch {}
+      break;
+    } catch {}
+  }
+}
+
+function setBacklight(value) {
+  if (!backlightPath) return;
+  try { fs.writeFileSync(backlightPath, String(Math.max(1, Math.min(backlightMax, value)))); } catch {}
+}
+
+function dimScreen() {
+  if (isDimmed) return;
+  isDimmed = true;
+  setBacklight(BRIGHTNESS_DIM);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('dim-state', true);
+  }
+}
+
+function wakeScreen() {
+  if (!isDimmed) return;
+  isDimmed = false;
+  setBacklight(backlightMax);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('dim-state', false);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Health history (rolling buffer for uptime percentage)
+// ---------------------------------------------------------------------------
+const HISTORY_SIZE = 120; // 1 hour at 30s intervals
+const healthHistory = {
+  grafana: [], soc: [], uptime: [], pihole: [], mudkat: []
+};
+
+function pushHealth(serviceId, status) {
+  const buf = healthHistory[serviceId];
+  if (!buf) return;
+  buf.push(status === 'online' ? 1 : 0);
+  if (buf.length > HISTORY_SIZE) buf.shift();
+}
+
+function getUptimePercent(serviceId) {
+  const buf = healthHistory[serviceId];
+  if (!buf || buf.length === 0) return null;
+  const up = buf.reduce((a, b) => a + b, 0);
+  return Math.round((up / buf.length) * 100);
+}
+
+// ---------------------------------------------------------------------------
+// Service error reload state
+// ---------------------------------------------------------------------------
+let errorRetryTimer = null;
 
 // ---------------------------------------------------------------------------
 // Window creation
@@ -105,6 +230,35 @@ function loadServiceView(serviceId) {
   mainWindow.addBrowserView(activeView);
   activeView.setBounds({ x: 0, y: 48, width: 800, height: 432 });
   activeView.setAutoResize({ width: true, height: true });
+
+  // Block navigation to anything outside the local network
+  activeView.webContents.on('will-navigate', (event, url) => {
+    if (!isLocalUrl(url)) event.preventDefault();
+  });
+  activeView.webContents.setWindowOpenHandler(({ url }) => {
+    return { action: 'deny' };
+  });
+
+  // Handle load failures — show error overlay with auto-retry
+  activeView.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    destroyActiveView();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('service-error', {
+        serviceId,
+        name: service.name,
+        error: errorDescription || `Error ${errorCode}`
+      });
+    }
+    // Auto-retry after 15 seconds
+    if (errorRetryTimer) clearTimeout(errorRetryTimer);
+    errorRetryTimer = setTimeout(() => {
+      errorRetryTimer = null;
+      if (state === 'service' || state === 'carousel') {
+        loadServiceView(serviceId);
+      }
+    }, 15000);
+  });
+
   activeView.webContents.loadURL(service.url);
 
   // After page loads: set zoom and inject pointer-event scroll handler.
@@ -376,14 +530,14 @@ function loadServiceView(serviceId) {
     if (activeServiceId === 'pihole' && config.pihole_password) {
       const url = activeView.webContents.getURL();
       if (url === 'http://localhost/admin/login') {
-        const escapedPw = config.pihole_password.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const safePassword = JSON.stringify(config.pihole_password);
         activeView.webContents.executeJavaScript(`
   (function() {
     var pw = document.getElementById('loginword')
            || document.getElementById('inputpassword')
            || document.querySelector('input[type="password"]');
     if (pw) {
-      pw.value = '${escapedPw}';
+      pw.value = ${safePassword};
       pw.dispatchEvent(new Event('input', { bubbles: true }));
       pw.dispatchEvent(new Event('change', { bubbles: true }));
       var form = pw.closest('form');
@@ -418,6 +572,10 @@ function destroyActiveView() {
 function goHome() {
   stopCarousel();
   destroyActiveView();
+  if (errorRetryTimer) {
+    clearTimeout(errorRetryTimer);
+    errorRetryTimer = null;
+  }
   state = 'home';
 
   // Notify dashboard: no active service, carousel off
@@ -469,10 +627,16 @@ function stopCarousel() {
 // ---------------------------------------------------------------------------
 function recordActivity() {
   lastActivity = Date.now();
+  wakeScreen();
 }
 
 function checkIdle() {
   const idle = Date.now() - lastActivity;
+
+  // Screen dimming — never turn off, just dim after threshold
+  if (idle >= DIM_THRESHOLD) {
+    dimScreen();
+  }
 
   if (state === 'home' && idle >= IDLE_HOME_THRESHOLD) {
     startCarousel();
@@ -545,16 +709,34 @@ function pingService(url) {
 }
 
 async function pingAllServices() {
-  const [grafana, uptime, pihole] = await Promise.all([
+  const [grafana, soc, uptime, pihole, mudkat] = await Promise.all([
     pingService(SERVICES.grafana.pingUrl),
+    pingService(SERVICES.soc.pingUrl),
     pingService(SERVICES.uptime.pingUrl),
-    pingService(SERVICES.pihole.pingUrl)
+    pingService(SERVICES.pihole.pingUrl),
+    pingService(SERVICES.mudkat.pingUrl)
   ]);
 
-  const status = { grafana, uptime, pihole };
+  const status = { grafana, soc, uptime, pihole, mudkat };
+
+  // Record health history
+  pushHealth('grafana', grafana);
+  pushHealth('soc', soc);
+  pushHealth('uptime', uptime);
+  pushHealth('pihole', pihole);
+  pushHealth('mudkat', mudkat);
+
+  const uptimePercents = {
+    grafana: getUptimePercent('grafana'),
+    soc: getUptimePercent('soc'),
+    uptime: getUptimePercent('uptime'),
+    pihole: getUptimePercent('pihole'),
+    mudkat: getUptimePercent('mudkat')
+  };
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('status-update', status);
+    mainWindow.webContents.send('health-history', uptimePercents);
   }
 }
 
@@ -585,6 +767,44 @@ function startUptimeBroadcast() {
 }
 
 // ---------------------------------------------------------------------------
+// MUDKAT API polling
+// ---------------------------------------------------------------------------
+function fetchJSON(url) {
+  return new Promise((resolve, reject) => {
+    try {
+      const request = net.request({ url, method: 'GET' });
+      let data = '';
+      const timeout = setTimeout(() => { request.abort(); reject(new Error('timeout')); }, 8000);
+      request.on('response', (response) => {
+        response.on('data', (chunk) => { data += chunk.toString(); });
+        response.on('end', () => { clearTimeout(timeout); try { resolve(JSON.parse(data)); } catch (e) { reject(e); } });
+      });
+      request.on('error', (err) => { clearTimeout(timeout); reject(err); });
+      request.end();
+    } catch (e) { reject(e); }
+  });
+}
+
+let mudkatPollInterval = null;
+
+async function fetchMudkatData() {
+  const results = await Promise.allSettled([
+    fetchJSON(MUDKAT_API + '/api/overview'),
+    fetchJSON(MUDKAT_API + '/api/agents'),
+    fetchJSON(MUDKAT_API + '/api/ioc/watchlist')
+  ]);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (results[0].status === 'fulfilled') mainWindow.webContents.send('mudkat-overview', results[0].value);
+  if (results[1].status === 'fulfilled') mainWindow.webContents.send('mudkat-agents', results[1].value);
+  if (results[2].status === 'fulfilled') {
+    const wl = results[2].value;
+    mainWindow.webContents.send('mudkat-ioc', { count: Array.isArray(wl) ? wl.length : 0 });
+  }
+}
+
+function startMudkatPolling() { fetchMudkatData(); mudkatPollInterval = setInterval(fetchMudkatData, 30000); }
+
+// ---------------------------------------------------------------------------
 // IPC handlers
 // ---------------------------------------------------------------------------
 function setupIPC() {
@@ -610,6 +830,15 @@ function setupIPC() {
       goHome();
     }
   });
+
+  ipcMain.on('retry-service', (_event, serviceId) => {
+    recordActivity();
+    if (errorRetryTimer) {
+      clearTimeout(errorRetryTimer);
+      errorRetryTimer = null;
+    }
+    navigateToService(serviceId);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -622,11 +851,13 @@ app.commandLine.appendSwitch('enable-pointer-events');
 // App lifecycle
 // ---------------------------------------------------------------------------
 app.whenReady().then(() => {
+  initBacklight();
   createMainWindow();
   setupIPC();
   startClock();
   startPinging();
   startUptimeBroadcast();
+  startMudkatPolling();
 
   // Check idle state every 5 seconds
   idleCheckInterval = setInterval(checkIdle, 5000);
@@ -640,5 +871,8 @@ app.on('before-quit', () => {
   if (clockInterval) clearInterval(clockInterval);
   if (pingInterval) clearInterval(pingInterval);
   if (idleCheckInterval) clearInterval(idleCheckInterval);
+  if (mudkatPollInterval) clearInterval(mudkatPollInterval);
   stopCarousel();
+  // Restore full brightness on exit
+  setBacklight(backlightMax);
 });

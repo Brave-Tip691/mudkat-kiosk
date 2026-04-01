@@ -1,400 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=800, height=480, initial-scale=1.0">
-  <title>MUDKAT NOC</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; script-src 'self'; connect-src 'self'">
+<meta name="viewport" content="width=800,height=480,initial-scale=1,user-scalable=no">
+<title>MUDKAT COMMAND</title>
+<style>
+@font-face{font-family:'Orbitron';font-weight:400;src:url('../assets/fonts/Orbitron-Regular.woff2') format('woff2')}
+@font-face{font-family:'Orbitron';font-weight:700;src:url('../assets/fonts/Orbitron-Bold.woff2') format('woff2')}
+@font-face{font-family:'Orbitron';font-weight:900;src:url('../assets/fonts/Orbitron-Black.woff2') format('woff2')}
+@font-face{font-family:'Share Tech Mono';font-weight:400;src:url('../assets/fonts/ShareTechMono-Regular.woff2') format('woff2')}
 
-    :root {
-      --bg: #1a0a2e;
-      --cyan: #00d4ff;
-      --green: #00ff88;
-      --yellow: #ffcc00;
-      --red: #ff4444;
-      --dim: #666688;
-      --panel-bg: rgba(0, 212, 255, 0.04);
-      --panel-border: rgba(0, 212, 255, 0.25);
-    }
+:root{
+  --void:#0d0a0e;--iron:#1a1215;--copper:#c47a2a;--amber:#e8a33c;
+  --forge:#ff6b2b;--coal:#c03020;--steam:#e8dcc8;--rust:#5a4a3a;--moss:#5a9a4a;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:800px;height:480px;overflow:hidden;background:var(--void);color:var(--steam);font-family:'Share Tech Mono',monospace;-webkit-user-select:none;user-select:none}
 
-    html, body {
-      width: 800px;
-      height: 480px;
-      overflow: hidden;
-      background: var(--bg);
-      color: var(--cyan);
-      font-family: 'Share Tech Mono', monospace;
-      user-select: none;
-      cursor: default;
-    }
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,0,0,0.6) 100%);z-index:1;pointer-events:none}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);z-index:9999;pointer-events:none}
 
-    /* Scanline overlay */
-    body::after {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: repeating-linear-gradient(
-        transparent 0px,
-        transparent 3px,
-        rgba(0, 0, 0, 0.08) 3px,
-        rgba(0, 0, 0, 0.08) 4px
-      );
-      pointer-events: none;
-      z-index: 9999;
-    }
+canvas#particles{position:fixed;top:0;left:0;width:800px;height:480px;z-index:0;pointer-events:none}
 
-    /* ---- Top bar ---- */
-    .top-bar {
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--panel-border);
-      background: var(--panel-bg);
-    }
+/* TOP BAR */
+.top-bar{position:relative;z-index:2;height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:linear-gradient(180deg,rgba(26,18,21,0.95),rgba(13,10,14,0.9));border-bottom:1px solid rgba(196,122,42,0.3)}
+.brand{display:flex;align-items:center;gap:6px}
+.brand svg{width:22px;height:22px;color:var(--copper)}
+.brand-text{font-family:'Orbitron',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;color:var(--copper);text-shadow:0 0 8px rgba(196,122,42,0.4)}
+.threat-display{display:flex;align-items:center;gap:8px}
+.threat-segs{display:flex;gap:3px}
+.threat-segs .seg{width:18px;height:8px;background:rgba(90,74,58,0.3);border-radius:1px;transition:background 0.5s}
+.threat-segs .seg.g{background:var(--moss)}
+.threat-segs .seg.yg{background:#8ab53a}
+.threat-segs .seg.y{background:var(--amber)}
+.threat-segs .seg.o{background:var(--forge)}
+.threat-segs .seg.r{background:var(--coal)}
+.threat-label{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--moss)}
+.clock{text-align:right}
+.clock-time{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--amber);letter-spacing:1px}
+.clock-date{font-size:8px;color:var(--rust);letter-spacing:1px}
 
-    .top-bar .title {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      color: var(--cyan);
-      letter-spacing: 3px;
-    }
+/* MAIN GRID */
+.main-grid{position:relative;z-index:2;height:388px;display:grid;grid-template-columns:190px 1fr 190px;gap:10px;padding:6px 10px}
 
-    .top-bar .clock {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 14px;
-      color: var(--yellow);
-      letter-spacing: 1px;
-    }
+/* PANELS */
+.panel{background:rgba(26,18,21,0.7);border:1px solid rgba(196,122,42,0.15);border-radius:3px;padding:8px;position:relative;overflow:hidden}
+.panel::before{content:'';position:absolute;top:0;left:0;width:12px;height:12px;border-top:1px solid var(--copper);border-left:1px solid var(--copper);opacity:0.5}
+.panel::after{content:'';position:absolute;top:0;right:0;width:12px;height:12px;border-top:1px solid var(--copper);border-right:1px solid var(--copper);opacity:0.5}
+.panel .corners::before{content:'';position:absolute;bottom:0;left:0;width:12px;height:12px;border-bottom:1px solid var(--copper);border-left:1px solid var(--copper);opacity:0.5}
+.panel .corners::after{content:'';position:absolute;bottom:0;right:0;width:12px;height:12px;border-bottom:1px solid var(--copper);border-right:1px solid var(--copper);opacity:0.5}
+.panel-title{font-family:'Orbitron',sans-serif;font-size:8px;font-weight:700;letter-spacing:2px;color:var(--copper);margin-bottom:6px;text-transform:uppercase}
 
-    /* ---- Tile row ---- */
-    .tile-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      height: calc(480px - 48px - 32px);
-      padding: 0 24px;
-    }
+/* AGENT FLEET */
+.agent-list{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.agent-row{display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(90,74,58,0.1);border-radius:2px;border-left:2px solid var(--rust)}
+.agent-row.active{border-left-color:var(--moss)}
+.agent-row.idle{border-left-color:var(--amber)}
+.agent-row.error{border-left-color:var(--coal)}
+.agent-dot{width:6px;height:6px;border-radius:50%;background:var(--rust)}
+.agent-row.active .agent-dot{background:var(--moss)}
+.agent-row.idle .agent-dot{background:var(--amber)}
+.agent-row.error .agent-dot{background:var(--coal)}
+.agent-name{font-size:9px;color:var(--steam);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-status{font-size:8px;color:var(--rust)}
+.agent-row.active .agent-status{color:var(--moss)}
+.agent-badge{font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:var(--amber)}
+.fleet-summary{font-size:8px;color:var(--rust);margin-top:4px}
 
-    .tile {
-      position: relative;
-      width: 220px;
-      height: 280px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      background: var(--panel-bg);
-      cursor: pointer;
-      transition: box-shadow 0.15s ease, background 0.15s ease;
-    }
+/* CENTER */
+.center-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.core-svg-wrap{width:210px;height:210px}
+.core-label{font-family:'Orbitron',sans-serif;font-size:8px;color:var(--rust);letter-spacing:2px;text-align:center;margin-top:2px}
+.stats-row{display:flex;gap:12px}
+.stat-box{text-align:center}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:var(--amber)}
+.stat-lbl{font-size:7px;color:var(--rust);letter-spacing:1px}
 
-    .tile:active {
-      box-shadow: 0 0 20px rgba(0, 212, 255, 0.6), inset 0 0 10px rgba(0, 212, 255, 0.1);
-      background: rgba(0, 212, 255, 0.08);
-    }
+/* RIGHT PANELS */
+.right-col{display:flex;flex-direction:column;gap:8px}
+.intel-row{display:flex;justify-content:space-between;align-items:baseline;padding:3px 0;border-bottom:1px solid rgba(90,74,58,0.15)}
+.intel-label{font-size:8px;color:var(--rust);letter-spacing:1px}
+.intel-val{font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:var(--amber)}
+.sev-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.sev-box{text-align:center;padding:6px 4px;background:rgba(90,74,58,0.1);border-radius:2px}
+.sev-box.crit{border-left:2px solid var(--coal)}
+.sev-box.high{border-left:2px solid var(--forge)}
+.sev-box.med{border-left:2px solid var(--amber)}
+.sev-box.low{border-left:2px solid var(--moss)}
+.sev-val{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--steam)}
+.sev-lbl{font-size:7px;color:var(--rust);letter-spacing:1px}
 
-    /* Corner brackets - top-left & top-right via tile pseudo-elements */
-    .tile::before,
-    .tile::after {
-      content: '';
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      pointer-events: none;
-    }
+/* BOTTOM BAR */
+.bottom-bar{position:relative;z-index:2;height:54px;padding:4px 10px;background:linear-gradient(0deg,rgba(26,18,21,0.95),rgba(13,10,14,0.9));border-top:1px solid rgba(196,122,42,0.15)}
+.svc-row{display:flex;justify-content:center;gap:16px;margin-bottom:4px}
+.svc{display:flex;align-items:center;gap:4px;cursor:pointer}
+.svc-dot{width:8px;height:8px;border-radius:50%;background:var(--rust);transition:background 0.5s,box-shadow 0.5s}
+.svc.online .svc-dot{background:var(--moss);box-shadow:0 0 6px rgba(90,154,74,0.5)}
+.svc.slow .svc-dot{background:var(--amber);box-shadow:0 0 6px rgba(232,163,60,0.4)}
+.svc.offline .svc-dot{background:var(--coal)}
+.svc-name{font-size:8px;color:var(--rust);letter-spacing:1px}
+.info-row{display:flex;justify-content:center;gap:20px;font-size:8px;color:var(--rust);letter-spacing:1px}
 
-    .tile::before {
-      top: -1px;
-      left: -1px;
-      border-top: 2px solid var(--cyan);
-      border-left: 2px solid var(--cyan);
-    }
+/* SERVICE BAR OVERLAY */
+.service-bar{position:fixed;top:0;left:0;width:800px;height:44px;background:linear-gradient(180deg,rgba(26,18,21,0.98),rgba(13,10,14,0.95));border-bottom:1px solid rgba(196,122,42,0.4);display:none;align-items:center;justify-content:space-between;padding:0 12px;z-index:100}
+.service-bar.active{display:flex}
+.home-btn{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:var(--copper);letter-spacing:2px;cursor:pointer;padding:6px 12px;border:1px solid rgba(196,122,42,0.3);border-radius:2px}
+.home-btn:active{background:rgba(196,122,42,0.2)}
+.service-name{font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;color:var(--amber);letter-spacing:3px}
+.svc-clock{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--amber)}
 
-    .tile::after {
-      top: -1px;
-      right: -1px;
-      border-top: 2px solid var(--cyan);
-      border-right: 2px solid var(--cyan);
-    }
+/* ERROR OVERLAY */
+.error-overlay{position:fixed;inset:0;background:rgba(13,10,14,0.95);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:200}
+.error-overlay.active{display:flex}
+.error-icon{font-size:48px;margin-bottom:12px;color:var(--coal)}
+.error-title{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:var(--coal);letter-spacing:2px;margin-bottom:8px}
+.error-msg{font-size:11px;color:var(--rust);margin-bottom:20px;text-align:center;max-width:400px}
+.error-retry{font-family:'Orbitron',sans-serif;font-size:10px;font-weight:700;color:var(--copper);letter-spacing:2px;cursor:pointer;padding:8px 20px;border:1px solid rgba(196,122,42,0.4);border-radius:2px}
+.error-retry:active{background:rgba(196,122,42,0.2)}
+.error-countdown{font-size:9px;color:var(--rust);margin-top:10px}
 
-    /* Bottom corners via inner element */
-    .tile-corners::before,
-    .tile-corners::after {
-      content: '';
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      pointer-events: none;
-    }
+/* SVG ANIMATIONS */
+@keyframes rotate-cw{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes rotate-ccw{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
+@keyframes pulse-glow{0%,100%{opacity:0.4}50%{opacity:0.9}}
+@keyframes core-pulse{0%,100%{opacity:0.7}50%{opacity:1}}
+@keyframes dot-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+.ring-outer-g{transform-origin:100px 100px;animation:rotate-cw 120s linear infinite}
+.ring-mid{transform-origin:100px 100px;animation:rotate-ccw 90s linear infinite}
+.ring-inner{animation:pulse-glow 4s ease-in-out infinite}
+.core-dot{animation:dot-pulse 3s ease-in-out infinite}
 
-    .tile-corners::before {
-      bottom: -1px;
-      left: -1px;
-      border-bottom: 2px solid var(--cyan);
-      border-left: 2px solid var(--cyan);
-    }
-
-    .tile-corners::after {
-      bottom: -1px;
-      right: -1px;
-      border-bottom: 2px solid var(--cyan);
-      border-right: 2px solid var(--cyan);
-    }
-
-    .tile .tile-corners {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .tile-icon {
-      width: 64px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .tile-icon svg {
-      width: 56px;
-      height: 56px;
-      fill: none;
-      stroke: var(--cyan);
-      stroke-width: 1.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .tile-name {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-align: center;
-    }
-
-    .tile-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--dim);
-      transition: background 0.3s ease;
-    }
-
-    .status-dot.online {
-      background: var(--green);
-      animation: pulse 2s infinite;
-    }
-
-    .status-dot.slow {
-      background: var(--yellow);
-      animation: none;
-    }
-
-    .status-dot.offline {
-      background: var(--red);
-      animation: none;
-    }
-
-    .status-label {
-      font-size: 11px;
-      color: var(--dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.4); opacity: 0.7; }
-    }
-
-    /* Flash effect on tap */
-    .tile.flash {
-      box-shadow: 0 0 30px rgba(0, 212, 255, 0.8), inset 0 0 15px rgba(0, 212, 255, 0.2);
-      background: rgba(0, 212, 255, 0.12);
-    }
-
-    /* ---- Bottom status bar ---- */
-    .status-bar {
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-top: 1px solid var(--panel-border);
-      background: var(--panel-bg);
-      font-size: 10px;
-      color: var(--dim);
-      letter-spacing: 1px;
-    }
-
-    .status-bar span {
-      white-space: nowrap;
-    }
-
-    /* ---- Service overlay top bar ---- */
-    .service-bar {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 800px;
-      height: 48px;
-      z-index: 9998;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      background: rgba(26, 10, 46, 0.92);
-      border-bottom: 1px solid var(--cyan);
-    }
-
-    .service-bar.visible {
-      display: flex;
-    }
-
-    .service-bar .home-btn {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 12px;
-      color: var(--cyan);
-      background: rgba(0, 212, 255, 0.1);
-      border: 1px solid var(--cyan);
-      border-radius: 4px;
-      padding: 6px 14px;
-      cursor: pointer;
-      letter-spacing: 1px;
-      transition: box-shadow 0.15s ease, background 0.15s ease;
-    }
-
-    .service-bar .home-btn:active {
-      box-shadow: 0 0 16px rgba(0, 212, 255, 0.6);
-      background: rgba(0, 212, 255, 0.25);
-    }
-
-    .service-bar .service-name {
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--cyan);
-      letter-spacing: 2px;
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    .service-bar .svc-clock {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 13px;
-      color: var(--yellow);
-      letter-spacing: 1px;
-    }
-
-    /* Hide home content when service is active */
-    .home-content.hidden {
-      display: none;
-    }
-  </style>
+/* DRILL-DOWN CURSOR */
+[data-drill],[data-service]{cursor:pointer}
+</style>
 </head>
 <body>
-  <!-- Service overlay top bar (hidden until a service is active) -->
-  <div class="service-bar" id="service-bar">
-    <button class="home-btn" id="home-btn">&#8962; HOME</button>
-    <span class="service-name" id="service-name"></span>
-    <span class="svc-clock" id="svc-clock">--:--:--</span>
+<div id="shift">
+
+<canvas id="particles" width="800" height="480"></canvas>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="brand">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="8" cy="10" r="3.5"/><circle cx="16" cy="10" r="3.5"/>
+      <circle cx="8" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="16" cy="10" r="1.2" fill="currentColor" stroke="none"/>
+      <line x1="4.5" y1="7" x2="3" y2="3"/><line x1="19.5" y1="7" x2="21" y2="3"/>
+      <path d="M11 13.5L12 15.5L13 13.5"/>
+      <path d="M5.5 15C5.5 20 12 22 12 22C12 22 18.5 20 18.5 15"/>
+    </svg>
+    <span class="brand-text">MUDKAT COMMAND</span>
   </div>
-
-  <div class="home-content" id="home-content">
-  <div class="top-bar">
-    <span class="title">MUDKAT NOC</span>
-    <span class="clock" id="clock">--:--:--</span>
+  <div class="threat-display">
+    <div class="threat-segs">
+      <div class="seg" id="tseg-1"></div>
+      <div class="seg" id="tseg-2"></div>
+      <div class="seg" id="tseg-3"></div>
+      <div class="seg" id="tseg-4"></div>
+      <div class="seg" id="tseg-5"></div>
+    </div>
+    <span class="threat-label" id="threat-label">NOMINAL</span>
   </div>
+  <div class="clock">
+    <div class="clock-time" id="clock-time">--:--:--</div>
+    <div class="clock-date" id="clock-date">---</div>
+  </div>
+</div>
 
-  <div class="tile-row">
-    <!-- Grafana -->
-    <div class="tile" data-service="grafana">
-      <div class="tile-corners"></div>
-      <div class="tile-icon">
-        <svg viewBox="0 0 64 64">
-          <!-- Bar chart icon -->
-          <rect x="8" y="36" width="10" height="20" rx="1" />
-          <rect x="27" y="20" width="10" height="36" rx="1" />
-          <rect x="46" y="8" width="10" height="48" rx="1" />
-        </svg>
-      </div>
-      <div class="tile-name">GRAFANA</div>
-      <div class="tile-status">
-        <div class="status-dot" id="dot-grafana"></div>
-        <span class="status-label" id="label-grafana">CHECKING</span>
-      </div>
+<!-- MAIN GRID -->
+<div class="main-grid">
+
+  <!-- LEFT: AGENT FLEET -->
+  <div class="panel" data-drill="agents">
+    <div class="panel-title">AGENT FLEET</div>
+    <div class="corners"></div>
+    <div id="agent-list" class="agent-list">
+      <div class="agent-row"><div class="agent-dot"></div><div class="agent-name">--</div><div class="agent-status">--</div></div>
+      <div class="agent-row"><div class="agent-dot"></div><div class="agent-name">--</div><div class="agent-status">--</div></div>
+      <div class="agent-row"><div class="agent-dot"></div><div class="agent-name">--</div><div class="agent-status">--</div></div>
+      <div class="agent-row"><div class="agent-dot"></div><div class="agent-name">--</div><div class="agent-status">--</div></div>
     </div>
-
-    <!-- Uptime Kuma -->
-    <div class="tile" data-service="uptime">
-      <div class="tile-corners"></div>
-      <div class="tile-icon">
-        <svg viewBox="0 0 64 64">
-          <!-- Heartbeat/pulse icon -->
-          <polyline points="4,32 16,32 22,12 28,52 34,24 40,40 46,32 60,32" />
-        </svg>
-      </div>
-      <div class="tile-name">UPTIME KUMA</div>
-      <div class="tile-status">
-        <div class="status-dot" id="dot-uptime"></div>
-        <span class="status-label" id="label-uptime">CHECKING</span>
-      </div>
-    </div>
-
-    <!-- Pi-hole -->
-    <div class="tile" data-service="pihole">
-      <div class="tile-corners"></div>
-      <div class="tile-icon">
-        <svg viewBox="0 0 64 64">
-          <!-- Shield icon -->
-          <path d="M32 4 L56 16 V36 C56 50 32 60 32 60 C32 60 8 50 8 36 V16 Z" />
-          <polyline points="22,32 30,40 42,24" />
-        </svg>
-      </div>
-      <div class="tile-name">PI-HOLE</div>
-      <div class="tile-status">
-        <div class="status-dot" id="dot-pihole"></div>
-        <span class="status-label" id="label-pihole">CHECKING</span>
-      </div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px">
+      <span id="agent-badge" class="agent-badge">0</span>
+      <span id="fleet-summary" class="fleet-summary">NO DATA</span>
     </div>
   </div>
 
-  <div class="status-bar">
-    <span id="display-ip">PI: --</span>
-    <span id="display-gw">GW: --</span>
-    <span id="uptime-display">UPTIME: --</span>
+  <!-- CENTER: CORE VIZ -->
+  <div class="center-col" data-drill="overview">
+    <div class="core-svg-wrap">
+      <svg id="core-svg" viewBox="0 0 200 200" width="210" height="210">
+        <defs>
+          <radialGradient id="glow">
+            <stop offset="0%" stop-color="#5a9a4a" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#5a9a4a" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="100" cy="100" r="50" fill="url(#glow)"/>
+        <!-- Crosshairs -->
+        <line x1="100" y1="5" x2="100" y2="40" stroke="#5a4a3a" stroke-opacity="0.3" stroke-width="0.5"/>
+        <line x1="100" y1="160" x2="100" y2="195" stroke="#5a4a3a" stroke-opacity="0.3" stroke-width="0.5"/>
+        <line x1="5" y1="100" x2="40" y2="100" stroke="#5a4a3a" stroke-opacity="0.3" stroke-width="0.5"/>
+        <line x1="160" y1="100" x2="195" y2="100" stroke="#5a4a3a" stroke-opacity="0.3" stroke-width="0.5"/>
+        <!-- Outer ring -->
+        <g class="ring-outer-g">
+          <circle cx="100" cy="100" r="90" fill="none" stroke="#5a4a3a" stroke-width="0.5" stroke-dasharray="6 3" opacity="0.5"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(0 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(30 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(60 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(90 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(120 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(150 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(180 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(210 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(240 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(270 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(300 100 100)"/>
+          <line x1="100" y1="6" x2="100" y2="14" stroke="#c47a2a" stroke-width="1" transform="rotate(330 100 100)"/>
+        </g>
+        <!-- Middle ring -->
+        <circle class="ring-mid" cx="100" cy="100" r="68" fill="none" stroke="#e8a33c" stroke-width="0.8" stroke-dasharray="10 5 2 5"/>
+        <!-- Inner ring -->
+        <circle class="ring-inner" cx="100" cy="100" r="46" fill="none" stroke="#c47a2a" stroke-width="0.6"/>
+        <!-- Center dot -->
+        <circle class="core-dot" id="core-dot" cx="100" cy="100" r="8" fill="#5a9a4a"/>
+      </svg>
+    </div>
+    <div class="core-label" id="core-label">MUDKAT CORE</div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-val" id="stat-devices">--</div><div class="stat-lbl">DEVICES</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-online">--</div><div class="stat-lbl">ONLINE</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-findings">--</div><div class="stat-lbl">FINDINGS</div></div>
+    </div>
   </div>
-  </div><!-- /.home-content -->
 
-  <script src="dashboard.js"></script>
+  <!-- RIGHT PANELS -->
+  <div class="right-col">
+    <div class="panel" data-drill="mudkat">
+      <div class="panel-title">THREAT INTEL</div>
+      <div class="corners"></div>
+      <div class="intel-row"><span class="intel-label">IOCs TRACKED</span><span class="intel-val" id="ioc-count">--</span></div>
+      <div class="intel-row"><span class="intel-label">ACTIVE HITS</span><span class="intel-val" id="ioc-hits">--</span></div>
+      <div class="intel-row"><span class="intel-label">LAST HUNT</span><span class="intel-val" id="ioc-last">--</span></div>
+    </div>
+    <div class="panel" data-drill="findings" style="flex:1">
+      <div class="panel-title">FINDINGS</div>
+      <div class="corners"></div>
+      <div class="sev-grid">
+        <div class="sev-box crit"><div class="sev-val" id="sev-crit">0</div><div class="sev-lbl">CRIT</div></div>
+        <div class="sev-box high"><div class="sev-val" id="sev-high">0</div><div class="sev-lbl">HIGH</div></div>
+        <div class="sev-box med"><div class="sev-val" id="sev-med">0</div><div class="sev-lbl">MED</div></div>
+        <div class="sev-box low"><div class="sev-val" id="sev-low">0</div><div class="sev-lbl">LOW</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM BAR -->
+<div class="bottom-bar">
+  <div class="svc-row">
+    <div class="svc" data-service="grafana" id="sdot-grafana"><div class="svc-dot"></div><span class="svc-name">GRF</span></div>
+    <div class="svc" data-service="soc" id="sdot-soc"><div class="svc-dot"></div><span class="svc-name">SOC</span></div>
+    <div class="svc" data-service="uptime" id="sdot-uptime"><div class="svc-dot"></div><span class="svc-name">UPK</span></div>
+    <div class="svc" data-service="pihole" id="sdot-pihole"><div class="svc-dot"></div><span class="svc-name">PIH</span></div>
+    <div class="svc" data-service="mudkat" id="sdot-mudkat"><div class="svc-dot"></div><span class="svc-name">MUD</span></div>
+  </div>
+  <div class="info-row">
+    <span>SCAN: <span id="scan-info">--</span></span>
+    <span>PI: <span id="display-ip">--</span></span>
+    <span>UP: <span id="uptime-display">--</span></span>
+  </div>
+</div>
+
+</div><!-- /shift -->
+
+<!-- SERVICE BAR OVERLAY -->
+<div class="service-bar" id="service-bar">
+  <div class="home-btn" id="home-btn">HOME</div>
+  <div class="service-name" id="service-name">SERVICE</div>
+  <div class="svc-clock" id="svc-clock">--:--:--</div>
+</div>
+
+<!-- ERROR OVERLAY -->
+<div class="error-overlay" id="error-overlay">
+  <div class="error-icon">&#x26A0;</div>
+  <div class="error-title" id="error-title">CONNECTION ERROR</div>
+  <div class="error-msg" id="error-msg">Unable to reach service</div>
+  <div class="error-retry" id="error-retry">RETRY</div>
+  <div class="error-countdown" id="error-countdown"></div>
+</div>
+
+<div class="home" id="home-content"></div>
+
+<script src="dashboard.js"></script>
 </body>
 </html>
